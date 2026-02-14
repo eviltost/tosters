@@ -37,7 +37,7 @@ canvas#gl{display:block}
 <body>
 <div id="start-screen">
   <h1>TOSTER ZOMBIES</h1>
-  <h2>🍞</h2>
+  <h2>🍞🔪</h2>
   <p>Q/W/E/S - Move | RIGHT CLICK + DRAG - Look Around</p>
   <p>LEFT CLICK - Shoot | R - Reload | G - Grenade</p>
   <p>SHIFT - Sprint</p>
@@ -866,9 +866,9 @@ function loop(){
   if(G.reloading){G.reloadTime-=dt;if(G.reloadTime<=0){G.ammo=G.maxAmmo;G.reloading=false;updateHUD()}}
   if(G.weapon==='pistol'&&G.ammo<=0&&!G.reloading)reload();
   if(G.damageFlash>0){G.damageFlash-=dt;document.getElementById('damage-overlay').style.opacity=Math.max(0,G.damageFlash)}
-  if(G.hitFlashT>0){G.hitFlashT-=dt;document.getElementById('hit-flash').style.opacity=Math.max(0,G.hitFlashT/0.15*0.7)}else{document.getElementById('hit-flash').style.opacity=0}
+  if(G.hitFlashT>0){G.hitFlashT-=dt;document.getElementById('hit-flash').style.opacity=Math.max(0,G.hitFlashT/0.15*0.95)}else{document.getElementById('hit-flash').style.opacity=0}
   let hpPct=G.hp/100,vig=document.getElementById('low-health-vignette');
-  if(hpPct<0.8&&G.alive){let t=(0.8-hpPct)/0.8;let clearPct=45-t*42;let darkA=0.3+t*0.7;vig.style.background='radial-gradient(ellipse,transparent '+clearPct+'%,rgba(0,0,0,'+darkA+') '+(clearPct+15)+'%)';vig.style.opacity=1}else if(!G.alive){vig.style.opacity=0}else{vig.style.opacity=0}
+  if(hpPct<0.8&&G.alive){let t=(0.8-hpPct)/0.8;let clearPct=50-47*Math.pow(t,1.8);vig.style.background='radial-gradient(ellipse,transparent '+clearPct+'%,rgba(0,0,0,1) '+(clearPct+8)+'%)';vig.style.opacity=1}else if(!G.alive){vig.style.opacity=0}else{vig.style.opacity=0}
   let ac=G.enemies.filter(e=>e.alive).length;
   if(ac===0&&G.alive&&!waveCheckBlock){waveCheckBlock=true;G.wave++;setTimeout(()=>{spawnWave();waveCheckBlock=false},2000)}
   drawMinimap();
