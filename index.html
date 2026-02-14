@@ -385,6 +385,33 @@ function buildPickupModel(weaponType){
   return g;
 }
 
+// === LOOT PICKUP MODELS ===
+function buildHealthPickup(){
+  let g=new THREE.Group();
+  let mat=new THREE.MeshBasicMaterial({color:0xff0088});
+  let h=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.18,0.18),mat);g.add(h);
+  let v=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.6,0.18),mat);g.add(v);
+  let gl=new THREE.PointLight(0xff0088,0.8,5);gl.position.y=0.3;g.add(gl);
+  return g;
+}
+function buildAmmoPickup(){
+  let g=new THREE.Group();
+  let casing=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.3,8),new THREE.MeshPhongMaterial({color:0xccaa00}));g.add(casing);
+  let tip=new THREE.Mesh(new THREE.CylinderGeometry(0,0.09,0.18,8),new THREE.MeshPhongMaterial({color:0xdd8833}));tip.position.y=0.24;g.add(tip);
+  let rim=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,0.03,8),new THREE.MeshPhongMaterial({color:0xbb9900}));rim.position.y=-0.15;g.add(rim);
+  let gl=new THREE.PointLight(0x00ff00,0.8,5);gl.position.y=0.3;g.add(gl);
+  return g;
+}
+function buildGrenadePickup(){
+  let g=new THREE.Group();
+  let body=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.14,0.4,8),new THREE.MeshPhongMaterial({color:0x336633}));g.add(body);
+  let cap=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,0.08,8),new THREE.MeshPhongMaterial({color:0x555555}));cap.position.y=0.24;g.add(cap);
+  let lever=new THREE.Mesh(new THREE.BoxGeometry(0.03,0.22,0.03),new THREE.MeshPhongMaterial({color:0x888888}));lever.position.set(0.06,0.28,0);lever.rotation.z=-0.2;g.add(lever);
+  let ring=new THREE.Mesh(new THREE.TorusGeometry(0.04,0.012,6,8),new THREE.MeshPhongMaterial({color:0xcccccc}));ring.position.set(0.06,0.4,0);g.add(ring);
+  let gl=new THREE.PointLight(0x44ff44,0.8,5);gl.position.y=0.3;g.add(gl);
+  return g;
+}
+
 // Build all models and add to viewmodel scene
 wpModels.pistol=buildPistolModel();wpScene.add(wpModels.pistol);
 wpModels.autoRifle=buildAutoRifleModel();wpScene.add(wpModels.autoRifle);
@@ -510,6 +537,12 @@ function spawnWave(){
 
 function spawnParticles(pos,color,count){for(let i=0;i<count;i++){let m=new THREE.Mesh(new THREE.SphereGeometry(0.05+Math.random()*0.1,4,4),new THREE.MeshBasicMaterial({color}));m.position.copy(pos);scene.add(m);G.particles.push({mesh:m,life:0.5+Math.random()*0.5,vx:(Math.random()-0.5)*8,vy:Math.random()*6,vz:(Math.random()-0.5)*8})}}
 
+function findClearDropSpot(bx,bz){
+  let md=1.5;
+  for(let r=0;r<=4.5;r+=1.5){let tries=r===0?1:8;for(let a=0;a<tries;a++){let ang=a*Math.PI*2/tries+Math.random()*0.3;let nx=bx+Math.cos(ang)*r,nz=bz+Math.sin(ang)*r;if(r>0&&isWall(nx,nz))continue;let ok=true;for(let p of G.pickups){let dx=p.mesh.position.x-nx,dz=p.mesh.position.z-nz;if(dx*dx+dz*dz<md*md){ok=false;break}}if(ok&&!isWall(nx,nz))return{x:nx,z:nz}}}
+  return{x:bx+(Math.random()-0.5)*3,z:bz+(Math.random()-0.5)*3};
+}
+
 function explodeToaster(e){
   playEnemyDeathSound(e.isElite);
   if(e.isElite){
@@ -517,18 +550,18 @@ function explodeToaster(e){
     spawnParticles(e.mesh.position.clone().add(new THREE.Vector3(0,2,0)),0x228822,20);
     spawnParticles(e.mesh.position.clone().add(new THREE.Vector3(0,3,0)),0xff4400,15);
     let types=['autoRifle','heavyAR','laser','shotgun'];let wT=types[Math.floor(Math.random()*types.length)];
-    let gg=buildPickupModel(wT);gg.position.copy(e.mesh.position);gg.position.y=0.4;scene.add(gg);
+    let gg=buildPickupModel(wT);let ws=findClearDropSpot(e.mesh.position.x,e.mesh.position.z);gg.position.set(ws.x,0.4,ws.z);scene.add(gg);
     G.pickups.push({mesh:gg,type:'weapon',weaponType:wT,weaponAmmo:wT==='laser'?300:wT==='shotgun'?30:90,life:25});
-    let hm=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,0.5),new THREE.MeshBasicMaterial({color:0xff0088}));hm.position.copy(e.mesh.position);hm.position.x+=1.5;hm.position.y=0.3;scene.add(hm);G.pickups.push({mesh:hm,type:'health',val:50,life:20});
+    let hm=buildHealthPickup();let hs=findClearDropSpot(e.mesh.position.x,e.mesh.position.z);hm.position.set(hs.x,0.3,hs.z);scene.add(hm);G.pickups.push({mesh:hm,type:'health',val:50,life:20});
     let el=G.enemies.filter(en=>en.alive&&en.isElite&&en!==e).length;if(el===0){document.getElementById('boss-bar').style.display='none';document.getElementById('boss-bar-label').style.display='none'}
   } else {
     spawnParticles(e.mesh.position,0xff8800,15);spawnParticles(e.mesh.position,0xaaaaaa,10);spawnParticles(e.mesh.position,0xff0000,5);
-    if(Math.random()<0.4){let m=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.4,0.4),new THREE.MeshBasicMaterial({color:0x00ff00}));m.position.copy(e.mesh.position);m.position.y=0.3;scene.add(m);G.pickups.push({mesh:m,type:'ammo',val:10,life:15})}
-    if(Math.random()<0.2){let m=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.4,0.4),new THREE.MeshBasicMaterial({color:0xff0088}));m.position.copy(e.mesh.position);m.position.y=0.3;scene.add(m);G.pickups.push({mesh:m,type:'health',val:20,life:15})}
-    if(Math.random()<0.15){let m=new THREE.Mesh(new THREE.SphereGeometry(0.25,8,8),new THREE.MeshBasicMaterial({color:0x44ff44}));m.position.copy(e.mesh.position);m.position.y=0.3;scene.add(m);G.pickups.push({mesh:m,type:'grenade',val:1,life:15})}
+    if(Math.random()<0.4){let m=buildAmmoPickup();let s=findClearDropSpot(e.mesh.position.x,e.mesh.position.z);m.position.set(s.x,0.3,s.z);scene.add(m);G.pickups.push({mesh:m,type:'ammo',val:10,life:15})}
+    if(Math.random()<0.2){let m=buildHealthPickup();let s=findClearDropSpot(e.mesh.position.x,e.mesh.position.z);m.position.set(s.x,0.3,s.z);scene.add(m);G.pickups.push({mesh:m,type:'health',val:20,life:15})}
+    if(Math.random()<0.15){let m=buildGrenadePickup();let s=findClearDropSpot(e.mesh.position.x,e.mesh.position.z);m.position.set(s.x,0.3,s.z);scene.add(m);G.pickups.push({mesh:m,type:'grenade',val:1,life:15})}
     if(Math.random()<0.25){
       let types=['autoRifle','heavyAR','laser','shotgun'];let wT=types[Math.floor(Math.random()*types.length)];
-      let gg=buildPickupModel(wT);gg.position.copy(e.mesh.position);gg.position.y=0.4;scene.add(gg);
+      let gg=buildPickupModel(wT);let s=findClearDropSpot(e.mesh.position.x,e.mesh.position.z);gg.position.set(s.x,0.4,s.z);scene.add(gg);
       G.pickups.push({mesh:gg,type:'weapon',weaponType:wT,weaponAmmo:wT==='laser'?200:wT==='shotgun'?20:60,life:20});
     }
   }
@@ -558,6 +591,7 @@ function grenadeExplode(gr){
 function shoot(){
   if(G.shootCD>0||G.reloading||!G.alive)return;
   let w=WEAPONS[G.weapon];
+  if(w.laser)return;
   if(G.weapon==='pistol'){if(G.ammo<=0)return;G.ammo--}
   else{if(G.specialAmmo<=0){switchToPistol();return}G.specialAmmo--;if(G.specialAmmo<=0)switchToPistol()}
   G.shootCD=w.fireRate;
@@ -791,13 +825,37 @@ function restartGame(){
 }
 document.getElementById('restart-btn').addEventListener('click',restartGame);
 
+// === CONTINUOUS LASER BEAM (replaces rapid-fire dots) ===
+function updateLaserBeam(dt){
+  if(G.weapon!=='laser'||!G.holdingFire||G.specialAmmo<=0||!G.alive){laserMesh.visible=false;return}
+  // Drain ammo over time (~33/sec to match old rate)
+  G.laserAccum=(G.laserAccum||0)+dt;
+  let drain=Math.floor(G.laserAccum*33);
+  if(drain>0){G.laserAccum-=drain/33;G.specialAmmo=Math.max(0,G.specialAmmo-drain);if(G.specialAmmo<=0){switchToPistol();laserMesh.visible=false;return}}
+  // Sound
+  G.laserSndCD=(G.laserSndCD||0)-dt;
+  if(G.laserSndCD<=0){playShotSound('laser');G.laserSndCD=0.08}
+  triggerMuzzleFlash();
+  // Single raycast per frame
+  let origin=camera.getWorldPosition(new THREE.Vector3()),dir=camera.getWorldDirection(new THREE.Vector3());
+  let rc=new THREE.Raycaster();rc.set(origin,dir);rc.far=100;
+  let hits=rc.intersectObjects(G.enemies.filter(e=>e.alive).map(e=>e.mesh),true);
+  let endPt=hits.length>0?hits[0].point:origin.clone().add(dir.clone().multiplyScalar(80));
+  let mid=origin.clone().add(endPt).multiplyScalar(0.5),len=origin.distanceTo(endPt);
+  laserMesh.position.copy(mid);laserMesh.scale.set(1,len,1);laserMesh.lookAt(endPt);laserMesh.rotateX(Math.PI/2);
+  laserMesh.visible=true;
+  // Damage (~16.7 DPS, same as before)
+  if(hits.length>0){let dmg=(0.5/0.03)*dt;for(let e of G.enemies){if(!e.alive)continue;let f=false;e.mesh.traverse(c=>{if(c===hits[0].object)f=true});if(f){e.hp-=dmg;e.hitFlash=0.05;if(e.hp<=0){G.score+=(e.isElite?500:100)*G.wave;G.kills++;explodeToaster(e)}break}}}
+  updateHUD();
+}
+
 let lastT=performance.now(),waveCheckBlock=false;
 function loop(){
   requestAnimationFrame(loop);
   let now=performance.now(),dt=Math.min((now-lastT)/1000,0.05);lastT=now;
   if(!G.started){renderer.clear();renderer.render(scene,camera);return}
   if(G.paused){lastT=now;renderer.clear();renderer.render(scene,camera);renderer.clearDepth();renderer.render(wpScene,wpCam);return}
-  movePlayer(dt);updateEnemies(dt);updateProjectiles(dt);updateWeaponViewModel(dt);
+  movePlayer(dt);updateEnemies(dt);updateProjectiles(dt);updateLaserBeam(dt);updateWeaponViewModel(dt);
   if(G.shootCD>0)G.shootCD-=dt;
   if(G.grenadeCD>0)G.grenadeCD-=dt;
   if(G.reloading){G.reloadTime-=dt;if(G.reloadTime<=0){G.ammo=G.maxAmmo;G.reloading=false;updateHUD()}}
